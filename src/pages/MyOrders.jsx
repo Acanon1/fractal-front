@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import OrderTable from "../components/OrderTable";
 
-const API_URL = "https://localhost:7212/api/Products";
+const API_URL = "https://fractal-back.onrender.com";
 
 export default function MyProducts() {
   const [products, setProducts] = useState([]);
@@ -15,7 +15,7 @@ export default function MyProducts() {
       const data = await response.json();
       setProducts(data);
     } catch (err) {
-      console.error("Failed to fetch products:", err);
+      console.error("Fallo en obtener productos:", err);
     }
   };
 
