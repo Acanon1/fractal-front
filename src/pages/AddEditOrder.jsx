@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 
+const API_URL = "https://fractal-back.onrender.com/api/products"; // endpoint real
+
 export default function AddEditOrder() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
@@ -12,18 +14,19 @@ export default function AddEditOrder() {
   const { Id } = useParams(); 
   const onProductAdded = location.state?.onProductAdded;
 
-
   useEffect(() => {
     if (!Id) return;
 
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`https://localhost:7212/api/Products/${Id}`);
+        const response = await fetch(`${API_URL}/${Id}`);
         if (!response.ok) throw new Error(`HTTP Status: ${response.status}`);
         const product = await response.json();
-        setName(product.name);
-        setPrice(product.price);
-        setQuantity(product.quantity);
+
+        // Ajuste por mayúsculas devueltas por PostgreSQL
+        setName(product.Name);
+        setPrice(product.Price);
+        setQuantity(product.Quantity);
       } catch (err) {
         setError("Error cargando producto: " + err.message);
       }
@@ -36,28 +39,28 @@ export default function AddEditOrder() {
     e.preventDefault();
 
     if (!name || price <= 0 || quantity < 0) {
-      setError("Ingresa datos validos");
+      setError("Ingresa datos válidos");
       return;
     }
 
     const product = {
-      name,
-      price: parseFloat(price),
-      quantity: parseInt(quantity),
+      Name: name,
+      Price: parseFloat(price),
+      Quantity: parseInt(quantity),
     };
 
     try {
       let response;
       if (Id) {
-
-        response = await fetch(`https://localhost:7212/api/Products/${Id}`, {
+        // Actualizar producto
+        response = await fetch(`${API_URL}/${Id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(product),
         });
       } else {
-        // CREAR
-        response = await fetch("https://localhost:7212/api/Products", {
+        // Crear producto
+        response = await fetch(API_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(product),
