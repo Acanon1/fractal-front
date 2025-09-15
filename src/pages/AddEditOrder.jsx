@@ -9,16 +9,16 @@ export default function AddEditOrder() {
 
   const navigate = useNavigate();
   const location = useLocation();
-  const { id } = useParams(); 
+  const { Id } = useParams(); 
   const onProductAdded = location.state?.onProductAdded;
 
 
   useEffect(() => {
-    if (!id) return;
+    if (!Id) return;
 
     const fetchProduct = async () => {
       try {
-        const response = await fetch(`https://localhost:7212/api/Products/${id}`);
+        const response = await fetch(`https://localhost:7212/api/Products/${Id}`);
         if (!response.ok) throw new Error(`HTTP Status: ${response.status}`);
         const product = await response.json();
         setName(product.name);
@@ -30,7 +30,7 @@ export default function AddEditOrder() {
     };
 
     fetchProduct();
-  }, [id]);
+  }, [Id]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,9 +48,9 @@ export default function AddEditOrder() {
 
     try {
       let response;
-      if (id) {
+      if (Id) {
 
-        response = await fetch(`https://localhost:7212/api/Products/${id}`, {
+        response = await fetch(`https://localhost:7212/api/Products/${Id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(product),
@@ -68,7 +68,7 @@ export default function AddEditOrder() {
 
       const newProduct = await response.json();
 
-      if (!id && onProductAdded) onProductAdded(newProduct);
+      if (!Id && onProductAdded) onProductAdded(newProduct);
 
       navigate("/my-orders"); 
     } catch (err) {
@@ -79,7 +79,7 @@ export default function AddEditOrder() {
 
   return (
     <div style={{ maxWidth: "400px", margin: "2rem auto" }}>
-      <h2>{id ? "Editar Producto" : "Crear Nuevo Producto"}</h2>
+      <h2>{Id ? "Editar Producto" : "Crear Nuevo Producto"}</h2>
       {error && <p style={{ color: "red" }}>{error}</p>}
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: "1rem" }}>
@@ -115,7 +115,7 @@ export default function AddEditOrder() {
         </div>
         <div style={{ display: "flex", gap: "0.5rem" }}>
           <button type="submit" style={{ padding: "0.5rem 1rem" }}>
-            {id ? "Guardar" : "Crear"}
+            {Id ? "Guardar" : "Crear"}
           </button>
           <button type="button" style={{ padding: "0.5rem 1rem" }} onClick={() => navigate("/my-orders")}>
             Cancelar

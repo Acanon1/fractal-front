@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import OrderTable from "../components/OrderTable";
 
-const API_URL = "https://fractal-back.onrender.com";
+const API_URL = "https://fractal-back.onrender.com/api/products";
 
 export default function MyProducts() {
   const [products, setProducts] = useState([]);
@@ -30,7 +30,7 @@ export default function MyProducts() {
 
 
   const handleProductDeleted = (deletedId) => {
-    setProducts((prev) => prev.filter((p) => p.id !== deletedId));
+    setProducts((prev) => prev.filter((p) => p.Id !== deletedId));
   };
 
 

@@ -19,10 +19,10 @@ export default function ProductsTable({ products, onProductDeleted }) {
       <tbody>
         {products.map((product) => (
           <tr key={product.id} style={{ backgroundColor: "#fff" }}>
-            <td style={{ border: "1px solid #ddd", padding: "0.5rem" }}>{product.id}</td>
-            <td style={{ border: "1px solid #ddd", padding: "0.5rem" }}>{product.name}</td>
-            <td style={{ border: "1px solid #ddd", padding: "0.5rem" }}>${product.price}</td>
-            <td style={{ border: "1px solid #ddd", padding: "0.5rem" }}>{product.quantity}</td>
+            <td style={{ border: "1px solid #ddd", padding: "0.5rem" }}>{product.Id}</td>
+            <td style={{ border: "1px solid #ddd", padding: "0.5rem" }}>{product.Name}</td>
+            <td style={{ border: "1px solid #ddd", padding: "0.5rem" }}>${product.Price}</td>
+            <td style={{ border: "1px solid #ddd", padding: "0.5rem" }}>{product.Quantity}</td>
             <td style={{ border: "1px solid #ddd", padding: "0.5rem", display: "flex", gap: "0.5rem" }}>
               <button
                 style={{ padding: "0.25rem 0.5rem", backgroundColor: "#28a745", color: "#fff", border: "none", borderRadius: "3px", cursor: "pointer" }}
@@ -32,8 +32,8 @@ export default function ProductsTable({ products, onProductDeleted }) {
               </button>
               
               <DeleteButton
-                productId={product.id}
-                onDeleted={(id) => onProductDeleted(id)}
+                productId={product.Id}
+                onDeleted={onProductDeleted}
               />
             </td>
           </tr>
