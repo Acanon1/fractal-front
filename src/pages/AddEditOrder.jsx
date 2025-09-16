@@ -1,12 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
-// API endpoints
 const PRODUCTS_API = "https://fractal-back.onrender.com/api/products";
 const ORDERS_API = "https://fractal-back.onrender.com/api/orders";
 
 export default function AddEditOrder() {
-  const { id } = useParams(); // edit if exists
+  const { id } = useParams(); // order ID for edit
   const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
@@ -16,12 +15,12 @@ export default function AddEditOrder() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-
+  // Modal state
   const [showModal, setShowModal] = useState(false);
   const [modalProductId, setModalProductId] = useState("");
   const [modalQuantity, setModalQuantity] = useState(1);
 
-  //
+  // Fetch products and existing order (if editing)
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -40,15 +39,15 @@ export default function AddEditOrder() {
         const res = await fetch(`${ORDERS_API}/${id}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setStatus(data.status);
+        setStatus(data.status || "Pendiente");
         setDate(new Date(data.date));
         setOrderItems(
-          data.orderProducts.map((op) => ({
+          (data.orderProducts || []).map((op) => ({
             productId: op.product.id,
             name: op.product.name,
             price: op.product.price,
             quantity: op.quantity,
-            totalPrice: op.quantity * op.product.price,
+            totalPrice: (op.quantity || 0) * (op.product.price || 0),
           }))
         );
       } catch (err) {
@@ -59,27 +58,30 @@ export default function AddEditOrder() {
     Promise.all([fetchProducts(), fetchOrder()]).finally(() => setLoading(false));
   }, [id]);
 
-  const finalPrice = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
+  // Calculate total price
+  const finalPrice = orderItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
   const totalProducts = orderItems.length;
 
-  //
+  // Add or update product from modal
   const confirmAddProduct = () => {
     if (!modalProductId || modalQuantity < 1) return;
 
     const prod = products.find((p) => p.id === parseInt(modalProductId));
     if (!prod) return;
 
+    const quantity = parseInt(modalQuantity) || 1;
     const exists = orderItems.find((item) => item.productId === prod.id);
+
     if (exists) {
       setOrderItems(orderItems.map((item) =>
         item.productId === prod.id
-          ? { ...item, quantity: modalQuantity, totalPrice: modalQuantity * item.price }
+          ? { ...item, quantity, totalPrice: quantity * (item.price || 0) }
           : item
       ));
     } else {
       setOrderItems([
         ...orderItems,
-        { productId: prod.id, name: prod.name, price: prod.price, quantity: modalQuantity, totalPrice: modalQuantity * prod.price }
+        { productId: prod.id, name: prod.name, price: prod.price, quantity, totalPrice: quantity * (prod.price || 0) }
       ]);
     }
 
@@ -95,11 +97,12 @@ export default function AddEditOrder() {
   };
 
   const removeOrderItem = (item) => {
-    if (window.confirm("Deseas eliminar este producto")) {
+    if (window.confirm("¿Deseas eliminar este producto de la orden?")) {
       setOrderItems(orderItems.filter((i) => i.productId !== item.productId));
     }
   };
 
+  // Submit order to backend
   const submitOrder = async () => {
     if (totalProducts === 0) {
       alert("Agrega al menos un producto.");
@@ -157,9 +160,9 @@ export default function AddEditOrder() {
         <input type="text" disabled value={`$${finalPrice.toFixed(2)}`} />
       </div>
 
-      <button onClick={() => setShowModal(true)}>Agregar producto</button>
+      <button onClick={() => setShowModal(true)}>Add Product</button>
 
- 
+      {/* Modal */}
       {showModal && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "#00000080", display: "flex", justifyContent: "center", alignItems: "center" }}>
           <div style={{ backgroundColor: "white", padding: "1rem" }}>
@@ -170,7 +173,12 @@ export default function AddEditOrder() {
                 <option key={p.id} value={p.id}>{p.name} - ${p.price}</option>
               ))}
             </select>
-            <input type="number" min="1" value={modalQuantity} onChange={(e) => setModalQuantity(parseInt(e.target.value))} />
+            <input
+              type="number"
+              min="1"
+              value={modalQuantity}
+              onChange={(e) => setModalQuantity(parseInt(e.target.value) || 1)}
+            />
             <div style={{ marginTop: "1rem" }}>
               <button onClick={confirmAddProduct}>Confirm</button>
               <button onClick={() => setShowModal(false)}>Cancel</button>
@@ -179,7 +187,7 @@ export default function AddEditOrder() {
         </div>
       )}
 
-   
+      {/* Table of order items */}
       <table border="1" cellPadding="5" style={{ borderCollapse: "collapse", marginTop: "1rem", width: "100%" }}>
         <thead>
           <tr>
@@ -200,8 +208,8 @@ export default function AddEditOrder() {
               <td>{item.quantity}</td>
               <td>${item.totalPrice.toFixed(2)}</td>
               <td>
-                <button onClick={() => editOrderItem(item)}>editar</button>{" "}
-                <button onClick={() => removeOrderItem(item)}>eliminar</button>
+                <button onClick={() => editOrderItem(item)}>Edit</button>{" "}
+                <button onClick={() => removeOrderItem(item)}>Remove</button>
               </td>
             </tr>
           ))}
@@ -209,7 +217,7 @@ export default function AddEditOrder() {
       </table>
 
       <h2>Total: ${finalPrice.toFixed(2)}</h2>
-      <button onClick={submitOrder}>{id ? "Actualizar orden" : "crear orden"}</button>
+      <button onClick={submitOrder}>{id ? "Update Order" : "Create Order"}</button>
     </main>
   );
 }
