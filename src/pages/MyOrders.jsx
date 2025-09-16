@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "https://fractal-back.onrender.com/api/Orders";
+const API_URL = "https://fractal-back.onrender.com/api/orders";
 
 export default function MyOrders() {
   const [orders, setOrders] = useState([]);
@@ -17,8 +17,8 @@ export default function MyOrders() {
       const data = await response.json();
       setOrders(data);
     } catch (err) {
-      console.error("Fallo en obtener órdenes:", err);
-      setError("No se pudieron cargar las órdenes");
+      console.error("Fallo en obtener orden:", err);
+      setError("No se pudieron cargar las ordenes");
     } finally {
       setLoading(false);
     }
@@ -34,7 +34,7 @@ export default function MyOrders() {
 
   return (
     <main style={{ padding: "1rem" }}>
-      <h1>Mis Órdenes</h1>
+      <h1>Ordenes disponibles</h1>
 
       <button
         style={{
@@ -48,14 +48,14 @@ export default function MyOrders() {
         }}
         onClick={goToAddOrder}
       >
-        ➕ Crear Nueva Orden
+        Crear nueva orden de compra
       </button>
 
-      {loading && <p>Cargando órdenes...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      
+     
 
       {!loading && !error && orders.length === 0 && (
-        <p>No hay órdenes registradas todavía.</p>
+        <p>No hay ordenes todavia.</p>
       )}
 
       {!loading && !error && orders.length > 0 && (
