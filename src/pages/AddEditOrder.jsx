@@ -11,18 +11,17 @@ export default function AddEditOrder() {
 
   const [products, setProducts] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
-  const [orderNumber, setOrderNumber] = useState("");
   const [date, setDate] = useState(new Date());
   const [status, setStatus] = useState("Pendiente");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Modal state
+
   const [showModal, setShowModal] = useState(false);
   const [modalProductId, setModalProductId] = useState("");
   const [modalQuantity, setModalQuantity] = useState(1);
 
-  // Fetch products and existing order
+  //
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -41,7 +40,6 @@ export default function AddEditOrder() {
         const res = await fetch(`${ORDERS_API}/${id}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setOrderNumber(data.orderNumber);
         setStatus(data.status);
         setDate(new Date(data.date));
         setOrderItems(
@@ -62,10 +60,9 @@ export default function AddEditOrder() {
   }, [id]);
 
   const finalPrice = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
-
   const totalProducts = orderItems.length;
 
-  // Add or update product from modal
+  //
   const confirmAddProduct = () => {
     if (!modalProductId || modalQuantity < 1) return;
 
@@ -98,20 +95,18 @@ export default function AddEditOrder() {
   };
 
   const removeOrderItem = (item) => {
-    if (window.confirm("¿Deseas eliminar este producto de la orden?")) {
+    if (window.confirm("Deseas eliminar este producto")) {
       setOrderItems(orderItems.filter((i) => i.productId !== item.productId));
     }
   };
 
   const submitOrder = async () => {
-    if (!orderNumber || totalProducts === 0) {
-      alert("Completa el número de orden y agrega al menos un producto.");
+    if (totalProducts === 0) {
+      alert("Agrega al menos un producto.");
       return;
     }
 
     const payload = {
-      id: id ? parseInt(id) : 0,
-      orderNumber,
       status,
       orderProducts: orderItems.map((item) => ({
         productId: item.productId,
@@ -148,11 +143,6 @@ export default function AddEditOrder() {
       <h1>{id ? "Edit Order" : "Add Order"}</h1>
 
       <div style={{ marginBottom: "1rem" }}>
-        <label>Order #: </label>
-        <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} />
-      </div>
-
-      <div style={{ marginBottom: "1rem" }}>
         <label>Date: </label>
         <input type="text" disabled value={date.toLocaleDateString()} />
       </div>
@@ -167,9 +157,9 @@ export default function AddEditOrder() {
         <input type="text" disabled value={`$${finalPrice.toFixed(2)}`} />
       </div>
 
-      <button onClick={() => setShowModal(true)}>Add Product</button>
+      <button onClick={() => setShowModal(true)}>Agregar producto</button>
 
-      {/* Modal */}
+ 
       {showModal && (
         <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "#00000080", display: "flex", justifyContent: "center", alignItems: "center" }}>
           <div style={{ backgroundColor: "white", padding: "1rem" }}>
@@ -189,7 +179,7 @@ export default function AddEditOrder() {
         </div>
       )}
 
-      {/* Table of order items */}
+   
       <table border="1" cellPadding="5" style={{ borderCollapse: "collapse", marginTop: "1rem", width: "100%" }}>
         <thead>
           <tr>
@@ -210,8 +200,8 @@ export default function AddEditOrder() {
               <td>{item.quantity}</td>
               <td>${item.totalPrice.toFixed(2)}</td>
               <td>
-                <button onClick={() => editOrderItem(item)}>Edit</button>{" "}
-                <button onClick={() => removeOrderItem(item)}>Remove</button>
+                <button onClick={() => editOrderItem(item)}>editar</button>{" "}
+                <button onClick={() => removeOrderItem(item)}>eliminar</button>
               </td>
             </tr>
           ))}
@@ -219,7 +209,7 @@ export default function AddEditOrder() {
       </table>
 
       <h2>Total: ${finalPrice.toFixed(2)}</h2>
-      <button onClick={submitOrder}>{id ? "Update Order" : "Create Order"}</button>
+      <button onClick={submitOrder}>{id ? "Actualizar orden" : "crear orden"}</button>
     </main>
   );
 }

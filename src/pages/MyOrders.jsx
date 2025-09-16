@@ -1,184 +1,86 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
-const API_URL = "https://fractal-back.onrender.com/api/orders";
-const PRODUCTS_URL = "https://fractal-back.onrender.com/api/products";
+const ORDERS_API = "https://fractal-back.onrender.com/api/orders";
 
-export default function AddEditOrder() {
-  const { id } = useParams();
+export default function MyOrders() {
+  const [orders, setOrders] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const [products, setProducts] = useState([]);
-  const [orderProducts, setOrderProducts] = useState([]);
-  const [orderNumber, setOrderNumber] = useState("");
-  const [status, setStatus] = useState("Pendiente");
-  const [loading, setLoading] = useState(true);
-
-  const [selectedProductId, setSelectedProductId] = useState("");
-  const [quantity, setQuantity] = useState(1);
-
   useEffect(() => {
-    // fetch products
-    const fetchProducts = async () => {
-      const res = await fetch(PRODUCTS_URL);
-      const data = await res.json();
-      setProducts(data);
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch(ORDERS_API);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setOrders(data);
+      } catch (err) {
+        setError("Error cargando órdenes: " + err.message);
+      } finally {
+        setLoading(false);
+      }
     };
+    fetchOrders();
+  }, []);
 
-    const fetchOrder = async () => {
-      if (!id) return;
-      const res = await fetch(`${API_URL}/${id}`);
-      const data = await res.json();
-      setOrderNumber(data.orderNumber);
-      setStatus(data.status);
-      setOrderProducts(
-        data.orderProducts.map((op) => ({
-          productId: op.product.id,
-          name: op.product.name,
-          price: op.product.price,
-          quantity: op.quantity,
-          totalPrice: op.quantity * op.product.price,
-        }))
-      );
-    };
+  const handleDelete = async (id) => {
+    if (!window.confirm("¿Deseas eliminar esta orden?")) return;
 
-    Promise.all([fetchProducts(), fetchOrder()]).finally(() => setLoading(false));
-  }, [id]);
-
-  const addProduct = () => {
-    if (!selectedProductId) return;
-    const prod = products.find((p) => p.id === parseInt(selectedProductId));
-    if (!prod) return;
-
-    const existing = orderProducts.find((op) => op.productId === prod.id);
-    if (existing) {
-      // update quantity if already exists
-      setOrderProducts(orderProducts.map((op) =>
-        op.productId === prod.id
-          ? { ...op, quantity: op.quantity + quantity, totalPrice: (op.quantity + quantity) * op.price }
-          : op
-      ));
-    } else {
-      setOrderProducts([
-        ...orderProducts,
-        {
-          productId: prod.id,
-          name: prod.name,
-          price: prod.price,
-          quantity,
-          totalPrice: prod.price * quantity,
-        },
-      ]);
+    try {
+      const res = await fetch(`${ORDERS_API}/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setOrders(orders.filter((o) => o.id !== id));
+    } catch (err) {
+      alert("Error eliminando orden: " + err.message);
     }
-
-    setQuantity(1);
-    setSelectedProductId("");
   };
 
-  const removeProduct = (productId) => {
-    setOrderProducts(orderProducts.filter((op) => op.productId !== productId));
-  };
-
-  const finalPrice = orderProducts.reduce((sum, op) => sum + op.totalPrice, 0);
-
-  const handleSubmit = async () => {
-    if (!orderNumber || orderProducts.length === 0) {
-      alert("Order number and at least one product are required.");
-      return;
-    }
-
-    const payload = {
-      id: id ? parseInt(id) : 0,
-      orderNumber,
-      status,
-      orderProducts: orderProducts.map((op) => ({
-        productId: op.productId,
-        quantity: op.quantity,
-      })),
-    };
-
-    const method = id ? "PUT" : "POST";
-    const url = id ? `${API_URL}/${id}` : API_URL;
-
-    const res = await fetch(url, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      alert(err.message || "Error saving order");
-      return;
-    }
-
-    navigate("/orders");
-  };
-
-  if (loading) return <p>Loading...</p>;
+  if (loading) return <p>Cargando órdenes...</p>;
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
-    <div>
-      <h1>{id ? "Edit Order" : "Add Order"}</h1>
-      <div>
-        <label>Order Number: </label>
-        <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} />
-      </div>
-      <div>
-        <label>Status: </label>
-        <select value={status} onChange={(e) => setStatus(e.target.value)}>
-          <option value="Pendiente">Pendiente</option>
-          <option value="Complelado">Complelado</option>
-        </select>
-      </div>
+    <main style={{ padding: "1rem" }}>
+      <h1>My Orders</h1>
 
-      <h2>Add Products</h2>
-      <div>
-        <select value={selectedProductId} onChange={(e) => setSelectedProductId(e.target.value)}>
-          <option value="">Select product</option>
-          {products.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.name} - ${p.price.toFixed(2)}
-            </option>
-          ))}
-        </select>
-        <input
-          type="number"
-          min="1"
-          value={quantity}
-          onChange={(e) => setQuantity(parseInt(e.target.value))}
-        />
-        <button onClick={addProduct}>Add Product</button>
-      </div>
-
-      <h2>Order Products</h2>
-      <table border="1" cellPadding="5" style={{ borderCollapse: "collapse", marginTop: "10px" }}>
+      <table border="1" cellPadding="5" style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Price</th>
-            <th>Quantity</th>
-            <th>Total Price</th>
-            <th>Remove</th>
+            <th>ID</th>
+            <th>Order #</th>
+            <th>Date</th>
+            <th># Products</th>
+            <th>Final Price</th>
+            <th>Status</th>
+            <th>Options</th>
           </tr>
         </thead>
         <tbody>
-          {orderProducts.map((op) => (
-            <tr key={op.productId}>
-              <td>{op.name}</td>
-              <td>${op.price.toFixed(2)}</td>
-              <td>{op.quantity}</td>
-              <td>${op.totalPrice.toFixed(2)}</td>
-              <td>
-                <button onClick={() => removeProduct(op.productId)}>Remove</button>
-              </td>
+          {orders.length === 0 ? (
+            <tr>
+              <td colSpan="7" style={{ textAlign: "center" }}>No orders found</td>
             </tr>
-          ))}
+          ) : (
+            orders.map((order) => (
+              <tr key={order.id}>
+                <td>{order.id}</td>
+                <td>{order.orderNumber}</td>
+                <td>{new Date(order.date).toLocaleDateString()}</td>
+                <td>{order.orderProducts.length}</td>
+                <td>${order.finalPrice.toFixed(2)}</td>
+                <td>{order.status}</td>
+                <td>
+                  <button onClick={() => navigate(`/orders/edit/${order.id}`)} disabled={order.status === "Complelado"}>
+                    Edit
+                  </button>{" "}
+                  <button onClick={() => handleDelete(order.id)}>Delete</button>
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
-
-      <h3>Final Price: ${finalPrice.toFixed(2)}</h3>
-      <button onClick={handleSubmit}>{id ? "Update Order" : "Create Order"}</button>
-    </div>
+    </main>
   );
 }
