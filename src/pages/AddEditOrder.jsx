@@ -8,7 +8,6 @@ export default function AddEditOrder() {
   const [orderItems, setOrderItems] = useState([]);
   const [error, setError] = useState("");
 
-
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -23,7 +22,6 @@ export default function AddEditOrder() {
     fetchProducts();
   }, []);
 
-  
   const updateQuantity = (product, qty) => {
     const quantity = parseInt(qty) || 0;
     setOrderItems((prev) => {
@@ -51,7 +49,6 @@ export default function AddEditOrder() {
 
   const finalPrice = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
-
   const submitOrder = async () => {
     const validItems = orderItems.filter((item) => item.quantity > 0);
     if (validItems.length === 0) {
@@ -59,12 +56,12 @@ export default function AddEditOrder() {
       return;
     }
 
-    const orderPayload = {
-      orderNumber: `ORD-${Date.now()}`,
+   
+    const orderTransaction = {
       date: new Date().toISOString(),
       status: "Pendiente",
       finalPrice,
-      products: validItems.map((item) => ({
+      orderProducts: validItems.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
         totalPrice: item.totalPrice,
@@ -75,13 +72,14 @@ export default function AddEditOrder() {
       const res = await fetch(ORDERS_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderPayload),
+        body: JSON.stringify(orderTransaction),
       });
+
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      alert("Pedido creado");
+      alert("Pedido creado exitosamente");
       setOrderItems([]);
     } catch (err) {
-      alert("Error al cargan orden: " + err.message);
+      alert("Error al crear la orden: " + err.message);
     }
   };
 
@@ -103,7 +101,7 @@ export default function AddEditOrder() {
         </thead>
         <tbody>
           {products.map((p) => {
-            const item = orderItems.find((oi) => oi.productId === p.id);
+            const item = orderItems.find((oit) => oit.productId === p.id);
             return (
               <tr key={p.id}>
                 <td>{p.name}</td>
@@ -126,7 +124,7 @@ export default function AddEditOrder() {
 
       <h2>Total: ${finalPrice}</h2>
 
-      <button onClick={submitOrder}>Confirmar orden</button>
+      <button onClick={submitOrder}>Enviar orden</button>
     </main>
   );
 }
