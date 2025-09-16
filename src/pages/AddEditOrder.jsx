@@ -1,69 +1,70 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
 
 const PRODUCTS_API = "https://fractal-back.onrender.com/api/products";
 const ORDERS_API = "https://fractal-back.onrender.com/api/orders";
 
 export default function AddEditOrder() {
-  const [orderNumber, setOrderNumber] = useState("");
-  const [status, setStatus] = useState("Pending");
   const [products, setProducts] = useState([]);
-  const [selectedProductId, setSelectedProductId] = useState("");
-  const [quantity, setQuantity] = useState(1);
   const [orderItems, setOrderItems] = useState([]);
   const [error, setError] = useState("");
 
-  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const response = await fetch(PRODUCTS_API);
-        if (!response.ok) throw new Error("Error obteniendo productos ");
-        const data = await response.json();
+        const res = await fetch(PRODUCTS_API);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
         setProducts(data);
       } catch (err) {
-        setError( err);
+        setError("Error cargando productos: " + err.message);
       }
     };
     fetchProducts();
   }, []);
 
-  const addProductToOrder = () => {
-    if (!selectedProductId || quantity <= 0) return;
-
-    const product = products.find((p) => p.Id === parseInt(selectedProductId));
-    if (!product) return;
-
-    const totalPrice = product.Price * quantity;
-
-    setOrderItems((prev) => [
-      ...prev,
-      {
-        productId: product.Id,
-        name: product.Name,
-        quantity,
-        totalPrice,
-      },
-    ]);
+  
+  const updateQuantity = (product, qty) => {
+    const quantity = parseInt(qty) || 0;
+    setOrderItems((prev) => {
+      const exists = prev.find((p) => p.productId === product.id);
+      if (exists) {
+        return prev.map((p) =>
+          p.productId === product.id
+            ? { ...p, quantity, totalPrice: quantity * product.price }
+            : p
+        );
+      } else {
+        return [
+          ...prev,
+          {
+            productId: product.id,
+            name: product.name,
+            price: product.price,
+            quantity,
+            totalPrice: quantity * product.price,
+          },
+        ];
+      }
+    });
   };
 
   const finalPrice = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
 
-    if (!orderNumber || orderItems.length === 0) {
-      setError("ingresar un producto");
+  const submitOrder = async () => {
+    const validItems = orderItems.filter((item) => item.quantity > 0);
+    if (validItems.length === 0) {
+      alert("Agrega al menos un producto.");
       return;
     }
 
-    const newOrder = {
-      orderNumber,
+    const orderPayload = {
+      orderNumber: `ORD-${Date.now()}`,
       date: new Date().toISOString(),
-      status,
+      status: "Pendiente",
       finalPrice,
-      products: orderItems.map((item) => ({
+      products: validItems.map((item) => ({
         productId: item.productId,
         quantity: item.quantity,
         totalPrice: item.totalPrice,
@@ -71,100 +72,61 @@ export default function AddEditOrder() {
     };
 
     try {
-      const response = await fetch(ORDERS_API, {
+      const res = await fetch(ORDERS_API, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(newOrder),
+        body: JSON.stringify(orderPayload),
       });
-
-      if (!response.ok) throw new Error("Error creando orden");
-
-      navigate("/my-orders");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      alert("Pedido creado");
+      setOrderItems([]);
     } catch (err) {
-      setError("error al guardar la orden    " + err.message);
+      alert("Error al cargan orden: " + err.message);
     }
   };
 
+  if (error) return <p style={{ color: "red" }}>{error}</p>;
+
   return (
-    <div style={{ maxWidth: "600px", margin: "2rem auto" }}>
-      <h2>Crear Nueva Orden</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
+    <main style={{ padding: "1rem" }}>
+      <h1>Crear orden</h1>
 
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: "1rem" }}>
-          <label>Número de Orden:</label>
-          <input
-            type="text"
-            value={orderNumber}
-            onChange={(e) => setOrderNumber(e.target.value)}
-            style={{ width: "100%", padding: "0.5rem" }}
-            required
-          />
-        </div>
+      <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%" }}>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Precio</th>
+            <th>Stock</th>
+            <th>Cantidad</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          {products.map((p) => {
+            const item = orderItems.find((oi) => oi.productId === p.id);
+            return (
+              <tr key={p.id}>
+                <td>{p.name}</td>
+                <td>${p.price}</td>
+                <td>{p.quantity}</td>
+                <td>
+                  <input
+                    type="number"
+                    min="0"
+                    value={item ? item.quantity : 0}
+                    onChange={(e) => updateQuantity(p, e.target.value)}
+                  />
+                </td>
+                <td>{item ? `$${item.totalPrice}` : "$0"}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
 
-        <div style={{ marginBottom: "1rem" }}>
-          <label>Estado:</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-            style={{ width: "100%", padding: "0.5rem" }}
-          >
-            <option value="Pending">Pending</option>
-            <option value="Completed">Completed</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-        </div>
+      <h2>Total: ${finalPrice}</h2>
 
-        <h3>Agregar Productos</h3>
-        <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-          <select
-            value={selectedProductId}
-            onChange={(e) => setSelectedProductId(e.target.value)}
-            style={{ flex: 2, padding: "0.5rem" }}
-          >
-            <option value="">-- Selecciona un producto --</option>
-            {products.map((p) => (
-              <option key={p.Id} value={p.Id}>
-                {p.Name} (${p.Price})
-              </option>
-            ))}
-          </select>
-          <input
-            type="number"
-            min="1"
-            value={quantity}
-            onChange={(e) => setQuantity(parseInt(e.target.value))}
-            style={{ flex: 1, padding: "0.5rem" }}
-          />
-          <button type="button" onClick={addProductToOrder}>
-            Agregar
-          </button>
-        </div>
-
-        <h4>Productos en la Orden:</h4>
-        <ul>
-          {orderItems.map((item, idx) => (
-            <li key={idx}>
-              {item.name} - {item.quantity} x ${item.totalPrice}
-            </li>
-          ))}
-        </ul>
-
-        <p><strong>Total: ${finalPrice}</strong></p>
-
-        <div style={{ display: "flex", gap: "0.5rem", marginTop: "1rem" }}>
-          <button type="submit" style={{ padding: "0.5rem 1rem" }}>
-            Crear Orden
-          </button>
-          <button
-            type="button"
-            style={{ padding: "0.5rem 1rem" }}
-            onClick={() => navigate("/my-orders")}
-          >
-            Cancelar
-          </button>
-        </div>
-      </form>
-    </div>
+      <button onClick={submitOrder}>Confirmar orden</button>
+    </main>
   );
 }

@@ -6,7 +6,7 @@ export default function Layout() {
     <div>
 
       <nav>
-        <div className="logo">OrderHub</div>
+        <div className="logo">ProyectoTienda</div>
         <div>
           <NavLink
             to="/my-orders"
