@@ -5,21 +5,38 @@ export default function DeleteButton({ productId, onDeleted }) {
     if (!window.confirm("deseas borrar este producto")) return;
 
     try {
-      const response = await fetch(`https://localhost:7212/api/Products/${productId}`, {
-        method: "DELETE",
-      });
+      const response = await fetch(
+        `https://fractal-back.onrender.com/api/products/${productId}`,
+        { method: "DELETE" }
+      );
 
       if (!response.ok) {
-        throw new Error(`Fallo en creacion de producto. Status: ${response.status}`);
+        throw new Error(`Fallo al eliminar producto. Status: ${response.status}`);
       }
 
-  
-      onDeleted(productId);
+
+      if (onDeleted) {
+        onDeleted(productId);
+      }
     } catch (err) {
-      alert("Error tratando de eliminar producto: " + err.message);
-      console.error(err);
+      alert("Error al eliminar producto: " + err.message);
+      console.error("error:", err);
     }
   };
 
-  return <button onClick={handleDelete}>Delete</button>;
+  return (
+    <button
+      onClick={handleDelete}
+      style={{
+        padding: "0.25rem 0.5rem",
+        backgroundColor: "#dc3545",
+        color: "#fff",
+        border: "none",
+        borderRadius: "3px",
+        cursor: "pointer",
+      }}
+    >
+      Eliminar
+    </button>
+  );
 }
