@@ -1,13 +1,28 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
+// API endpoints
 const PRODUCTS_API = "https://fractal-back.onrender.com/api/products";
 const ORDERS_API = "https://fractal-back.onrender.com/api/orders";
 
 export default function AddEditOrder() {
+  const { id } = useParams(); // edit if exists
+  const navigate = useNavigate();
+
   const [products, setProducts] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
+  const [orderNumber, setOrderNumber] = useState("");
+  const [date, setDate] = useState(new Date());
+  const [status, setStatus] = useState("Pendiente");
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  // Modal state
+  const [showModal, setShowModal] = useState(false);
+  const [modalProductId, setModalProductId] = useState("");
+  const [modalQuantity, setModalQuantity] = useState(1);
+
+  // Fetch products and existing order
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -19,112 +34,192 @@ export default function AddEditOrder() {
         setError("Error cargando productos: " + err.message);
       }
     };
-    fetchProducts();
-  }, []);
 
-  const updateQuantity = (product, qty) => {
-    const quantity = parseInt(qty) || 0;
-    setOrderItems((prev) => {
-      const exists = prev.find((p) => p.productId === product.id);
-      if (exists) {
-        return prev.map((p) =>
-          p.productId === product.id
-            ? { ...p, quantity, totalPrice: quantity * product.price }
-            : p
+    const fetchOrder = async () => {
+      if (!id) return;
+      try {
+        const res = await fetch(`${ORDERS_API}/${id}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        setOrderNumber(data.orderNumber);
+        setStatus(data.status);
+        setDate(new Date(data.date));
+        setOrderItems(
+          data.orderProducts.map((op) => ({
+            productId: op.product.id,
+            name: op.product.name,
+            price: op.product.price,
+            quantity: op.quantity,
+            totalPrice: op.quantity * op.product.price,
+          }))
         );
-      } else {
-        return [
-          ...prev,
-          {
-            productId: product.id,
-            name: product.name,
-            price: product.price,
-            quantity,
-            totalPrice: quantity * product.price,
-          },
-        ];
+      } catch (err) {
+        setError("Error cargando orden: " + err.message);
       }
-    });
-  };
+    };
+
+    Promise.all([fetchProducts(), fetchOrder()]).finally(() => setLoading(false));
+  }, [id]);
 
   const finalPrice = orderItems.reduce((sum, item) => sum + item.totalPrice, 0);
 
-  const submitOrder = async () => {
-    const validItems = orderItems.filter((item) => item.quantity > 0);
-    if (validItems.length === 0) {
-      alert("Agrega al menos un producto.");
-      return;
+  const totalProducts = orderItems.length;
+
+  // Add or update product from modal
+  const confirmAddProduct = () => {
+    if (!modalProductId || modalQuantity < 1) return;
+
+    const prod = products.find((p) => p.id === parseInt(modalProductId));
+    if (!prod) return;
+
+    const exists = orderItems.find((item) => item.productId === prod.id);
+    if (exists) {
+      setOrderItems(orderItems.map((item) =>
+        item.productId === prod.id
+          ? { ...item, quantity: modalQuantity, totalPrice: modalQuantity * item.price }
+          : item
+      ));
+    } else {
+      setOrderItems([
+        ...orderItems,
+        { productId: prod.id, name: prod.name, price: prod.price, quantity: modalQuantity, totalPrice: modalQuantity * prod.price }
+      ]);
     }
 
-   
-    const orderTransaction = {
-      date: new Date().toISOString(),
-      status: "Pendiente",
-      finalPrice,
-      orderProducts: validItems.map((item) => ({
-        productId: item.productId,
-        quantity: item.quantity,
-        totalPrice: item.totalPrice,
-      })),
-    };
+    setModalProductId("");
+    setModalQuantity(1);
+    setShowModal(false);
+  };
 
-    try {
-      const res = await fetch(ORDERS_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(orderTransaction),
-      });
+  const editOrderItem = (item) => {
+    setModalProductId(item.productId.toString());
+    setModalQuantity(item.quantity);
+    setShowModal(true);
+  };
 
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      alert("Pedido creado exitosamente");
-      setOrderItems([]);
-    } catch (err) {
-      alert("Error al crear la orden: " + err.message);
+  const removeOrderItem = (item) => {
+    if (window.confirm("¿Deseas eliminar este producto de la orden?")) {
+      setOrderItems(orderItems.filter((i) => i.productId !== item.productId));
     }
   };
 
+  const submitOrder = async () => {
+    if (!orderNumber || totalProducts === 0) {
+      alert("Completa el número de orden y agrega al menos un producto.");
+      return;
+    }
+
+    const payload = {
+      id: id ? parseInt(id) : 0,
+      orderNumber,
+      status,
+      orderProducts: orderItems.map((item) => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }))
+    };
+
+    try {
+      const method = id ? "PUT" : "POST";
+      const url = id ? `${ORDERS_API}/${id}` : ORDERS_API;
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || "Error al guardar la orden");
+      }
+
+      alert(`Orden ${id ? "actualizada" : "creada"} exitosamente`);
+      navigate("/orders");
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  if (loading) return <p>Cargando...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
     <main style={{ padding: "1rem" }}>
-      <h1>Crear orden</h1>
+      <h1>{id ? "Edit Order" : "Add Order"}</h1>
 
-      <table border="1" cellPadding="6" style={{ borderCollapse: "collapse", width: "100%" }}>
+      <div style={{ marginBottom: "1rem" }}>
+        <label>Order #: </label>
+        <input value={orderNumber} onChange={(e) => setOrderNumber(e.target.value)} />
+      </div>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <label>Date: </label>
+        <input type="text" disabled value={date.toLocaleDateString()} />
+      </div>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <label># Products: </label>
+        <input type="text" disabled value={totalProducts} />
+      </div>
+
+      <div style={{ marginBottom: "1rem" }}>
+        <label>Final Price: </label>
+        <input type="text" disabled value={`$${finalPrice.toFixed(2)}`} />
+      </div>
+
+      <button onClick={() => setShowModal(true)}>Add Product</button>
+
+      {/* Modal */}
+      {showModal && (
+        <div style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", backgroundColor: "#00000080", display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <div style={{ backgroundColor: "white", padding: "1rem" }}>
+            <h2>Select Product</h2>
+            <select value={modalProductId} onChange={(e) => setModalProductId(e.target.value)}>
+              <option value="">Select a product</option>
+              {products.map((p) => (
+                <option key={p.id} value={p.id}>{p.name} - ${p.price}</option>
+              ))}
+            </select>
+            <input type="number" min="1" value={modalQuantity} onChange={(e) => setModalQuantity(parseInt(e.target.value))} />
+            <div style={{ marginTop: "1rem" }}>
+              <button onClick={confirmAddProduct}>Confirm</button>
+              <button onClick={() => setShowModal(false)}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Table of order items */}
+      <table border="1" cellPadding="5" style={{ borderCollapse: "collapse", marginTop: "1rem", width: "100%" }}>
         <thead>
           <tr>
-            <th>Nombre</th>
-            <th>Precio</th>
-            <th>Stock</th>
-            <th>Cantidad</th>
-            <th>Total</th>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Unit Price</th>
+            <th>Qty</th>
+            <th>Total Price</th>
+            <th>Options</th>
           </tr>
         </thead>
         <tbody>
-          {products.map((p) => {
-            const item = orderItems.find((oit) => oit.productId === p.id);
-            return (
-              <tr key={p.id}>
-                <td>{p.name}</td>
-                <td>${p.price}</td>
-                <td>{p.quantity}</td>
-                <td>
-                  <input
-                    type="number"
-                    min="0"
-                    value={item ? item.quantity : 0}
-                    onChange={(e) => updateQuantity(p, e.target.value)}
-                  />
-                </td>
-                <td>{item ? `$${item.totalPrice}` : "$0"}</td>
-              </tr>
-            );
-          })}
+          {orderItems.map((item) => (
+            <tr key={item.productId}>
+              <td>{item.productId}</td>
+              <td>{item.name}</td>
+              <td>${item.price}</td>
+              <td>{item.quantity}</td>
+              <td>${item.totalPrice.toFixed(2)}</td>
+              <td>
+                <button onClick={() => editOrderItem(item)}>Edit</button>{" "}
+                <button onClick={() => removeOrderItem(item)}>Remove</button>
+              </td>
+            </tr>
+          ))}
         </tbody>
       </table>
 
-      <h2>Total: ${finalPrice}</h2>
-
-      <button onClick={submitOrder}>Enviar orden</button>
+      <h2>Total: ${finalPrice.toFixed(2)}</h2>
+      <button onClick={submitOrder}>{id ? "Update Order" : "Create Order"}</button>
     </main>
   );
 }
