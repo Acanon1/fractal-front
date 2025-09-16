@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const PRODUCTS_API = "https://fractal-back.onrender.com/api/products";
-const ORDERS_API = "https://fractal-back.onrender.com/api/orders";
+const PRODUCTS_API = "https://fractal-back.onrender.com/api/Products";
+const ORDERS_API = "https://fractal-back.onrender.com/api/Orders";
 
 export default function AddEditOrder() {
   const [orderNumber, setOrderNumber] = useState("");

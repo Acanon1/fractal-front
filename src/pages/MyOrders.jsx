@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const API_URL = "https://fractal-back.onrender.com/api/orders";
+const API_URL = "https://fractal-back.onrender.com/api/Orders";
 
 export default function MyOrders() {
   const [orders, setOrders] = useState([]);
