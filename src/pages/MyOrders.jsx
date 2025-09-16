@@ -3,11 +3,34 @@ import { useNavigate } from "react-router-dom";
 
 const API_URL = "https://fractal-back.onrender.com/api/orders";
 
+const PRODUCTS_API = "https://fractal-back.onrender.com/api/products";
+
+
+
 export default function MyOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const [products, setProducts] = useState([]);
   const navigate = useNavigate();
+
+   useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch(PRODUCTS_API);
+        if (!res.ok) throw new Error(`Error HTTP: ${res.status}`);
+        const data = await res.json();
+        setProducts(data);
+      } catch (err) {
+        setError("Error al traer productos: " + err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+        fetchProducts();
+    }, []);
 
   const fetchOrders = async () => {
     try {
@@ -100,9 +123,35 @@ export default function MyOrders() {
                       ))}
                     </ul>
                   ) : (
-                    "no hay productos"
+                    "-----"
                   )}
                 </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+ 
+      {products.length === 0 ? (
+        <p>No hay productos disponibles.</p>
+      ) : (
+        <table border="1" cellPadding="8" style={{ marginTop: "1rem", borderCollapse: "collapse" }}>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Precio</th>
+              <th>Cantidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {products.map((p) => (
+              <tr key={p.id}>
+                <td>{p.id}</td>
+                <td>{p.name}</td>
+                <td>${p.price}</td>
+                <td>{p.quantity}</td>
               </tr>
             ))}
           </tbody>
