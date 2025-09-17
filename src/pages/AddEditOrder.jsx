@@ -5,13 +5,13 @@ const PRODUCTS_API = "https://fractal-back.onrender.com/api/products";
 const ORDERS_API = "https://fractal-back.onrender.com/api/orders";
 
 export default function AddEditOrder() {
-  const { id } = useParams(); // order ID for edit
+  const { id } = useParams(); // Order ID for editing
   const navigate = useNavigate();
 
   const [products, setProducts] = useState([]);
   const [orderItems, setOrderItems] = useState([]);
-  const [date, setDate] = useState(new Date());
   const [status, setStatus] = useState("Pendiente");
+  const [date, setDate] = useState(new Date());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -20,7 +20,7 @@ export default function AddEditOrder() {
   const [modalProductId, setModalProductId] = useState("");
   const [modalQuantity, setModalQuantity] = useState(1);
 
-  // Fetch products and existing order (if editing)
+  // Fetch products and existing order if editing
   useEffect(() => {
     const fetchProducts = async () => {
       try {
@@ -29,7 +29,7 @@ export default function AddEditOrder() {
         const data = await res.json();
         setProducts(data);
       } catch (err) {
-        setError("Error cargando productos: " + err.message);
+        setError("Error loading products: " + err.message);
       }
     };
 
@@ -39,37 +39,37 @@ export default function AddEditOrder() {
         const res = await fetch(`${ORDERS_API}/${id}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+
         setStatus(data.status || "Pendiente");
         setDate(new Date(data.date));
-        setOrderItems(
-          (data.orderProducts || []).map((op) => ({
-            productId: op.product.id,
-            name: op.product.name,
-            price: op.product.price,
-            quantity: op.quantity,
-            totalPrice: (op.quantity || 0) * (op.product.price || 0),
-          }))
-        );
+
+        // Map backend orderProducts to frontend orderItems
+        const items = (data.orderProducts || []).map((op) => ({
+          productId: op.product.id,
+          name: op.product.name,
+          price: op.product.price,
+          quantity: op.quantity,
+          totalPrice: (op.quantity || 0) * (op.product.price || 0),
+        }));
+        setOrderItems(items);
       } catch (err) {
-        setError("Error cargando orden: " + err.message);
+        setError("Error loading order: " + err.message);
       }
     };
 
     Promise.all([fetchProducts(), fetchOrder()]).finally(() => setLoading(false));
   }, [id]);
 
-  // Calculate total price
-  const finalPrice = orderItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
+  // Calculate totals
   const totalProducts = orderItems.length;
+  const finalPrice = orderItems.reduce((sum, item) => sum + (item.totalPrice || 0), 0);
 
   // Add or update product from modal
   const confirmAddProduct = () => {
-    if (!modalProductId || modalQuantity < 1) return;
-
     const prod = products.find((p) => p.id === parseInt(modalProductId));
-    if (!prod) return;
-
     const quantity = parseInt(modalQuantity) || 1;
+    if (!prod || quantity < 1) return;
+
     const exists = orderItems.find((item) => item.productId === prod.id);
 
     if (exists) {
@@ -97,15 +97,15 @@ export default function AddEditOrder() {
   };
 
   const removeOrderItem = (item) => {
-    if (window.confirm("¿Deseas eliminar este producto de la orden?")) {
+    if (window.confirm("Remove this product from order?")) {
       setOrderItems(orderItems.filter((i) => i.productId !== item.productId));
     }
   };
 
-  // Submit order to backend
+  // Submit order
   const submitOrder = async () => {
-    if (totalProducts === 0) {
-      alert("Agrega al menos un producto.");
+    if (orderItems.length === 0) {
+      alert("Add at least one product.");
       return;
     }
 
@@ -113,32 +113,33 @@ export default function AddEditOrder() {
       status,
       orderProducts: orderItems.map((item) => ({
         productId: item.productId,
-        quantity: item.quantity
-      }))
+        quantity: item.quantity,
+      })),
     };
 
     try {
       const method = id ? "PUT" : "POST";
       const url = id ? `${ORDERS_API}/${id}` : ORDERS_API;
+
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || "Error al guardar la orden");
+        throw new Error(err.message || "Failed to save order");
       }
 
-      alert(`Orden ${id ? "actualizada" : "creada"} exitosamente`);
+      alert(`Order ${id ? "updated" : "created"} successfully`);
       navigate("/orders");
     } catch (err) {
       alert(err.message);
     }
   };
 
-  if (loading) return <p>Cargando...</p>;
+  if (loading) return <p>Loading...</p>;
   if (error) return <p style={{ color: "red" }}>{error}</p>;
 
   return (
@@ -180,14 +181,14 @@ export default function AddEditOrder() {
               onChange={(e) => setModalQuantity(parseInt(e.target.value) || 1)}
             />
             <div style={{ marginTop: "1rem" }}>
-              <button onClick={confirmAddProduct}>Confirm</button>
+              <button onClick={confirmAddProduct}>Confirm</button>{" "}
               <button onClick={() => setShowModal(false)}>Cancel</button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Table of order items */}
+      {/* Table */}
       <table border="1" cellPadding="5" style={{ borderCollapse: "collapse", marginTop: "1rem", width: "100%" }}>
         <thead>
           <tr>
